@@ -1,1 +1,18 @@
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+--background: #F8FAFC;
+--foreground: #1E293B;
+}
+
+body {
+background-color: #F8FAFC;
+color: #1E293B;
+font-family: sans-serif;
+}
+
+.mms-up { color: #10B981; font-weight: bold; }
+.mms-down { color: #EF4444; font-weight: bold; }
