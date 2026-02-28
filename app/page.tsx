@@ -7,6 +7,7 @@ export default function Dashboard() {
 const [mainToken, setMainToken] = useState('');
 const [price, setPrice] = useState<number | null>(null);
 const [loading, setLoading] = useState(false);
+
 const [checklist, setChecklist] = useState<boolean[]>(new Array(12).fill(false));
 
 const toggleCheck = (index: number) => {
