@@ -1,7 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root { --background: #F8FAFC; --foreground: #1E293B; }
-body { background-color: #F8FAFC; color: #1E293B; font-family: sans-serif; }
-.etapa-2 { color: #10B981; font-weight: bold; }
-.etapa-4 { color: #EF4444; font-weight: bold; }
+
+body {
+  background-color: #F8FAFC;
+  color: #1E293B;
+}
