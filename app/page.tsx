@@ -20,7 +20,7 @@ const analizarToken = async () => {
 if (!mainToken) return;
 setLoading(true);
 try {
-const res = await fetch(/api/prices?token=${mainToken.toLowerCase()});
+const res = await fetch('/api/prices?token=' + mainToken.toLowerCase());
 const data = await res.json();
 if (data && data.length > 0) {
 setPrice(data[data.length - 1].price);
