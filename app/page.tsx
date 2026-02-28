@@ -20,6 +20,13 @@ newChecklist[index] = !newChecklist[index];
 setChecklist(newChecklist);
 };
 
+const generarPrompt = () => {
+const tokenName = mainToken ? mainToken.toUpperCase() : "el token seleccionado";
+const promptText = Por favor, dame toda la información relativa a ${tokenName} respondiendo ordenadamente a todas estas categorías que a continuación te detallo. Incluye una nota final del 1 al 10, siendo 1 una mala inversión y 10 una magnífica oportunidad de inversión. Debes ofrecer una nota para holders de largo plazo y otra para compras especulativas de corto o medio plazo.\n\nAquí tienes la plantilla para el análisis:\n + pabloReportItems.join('\n');
+navigator.clipboard.writeText(promptText);
+alert("Prompt copiado al portapapeles. ¡Listo para pegar en tu IA!");
+};
+
 const analizarToken = async () => {
 if (!mainToken) return;
 setLoading(true);
@@ -107,18 +114,18 @@ className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shad
 </div>
 </header>
 
-  <Tabs.Root defaultValue="tecnico" className="w-full">
+  <Tabs.Root defaultValue="fundamental" className="w-full">
     <Tabs.List className="bg-white p-2 rounded-[1.5rem] mb-8 border border-slate-100 shadow-sm inline-flex gap-2 overflow-x-auto max-w-full">
-      <Tabs.Trigger value="lp" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><BarChart3 size={20}/> LP Strategy</Tabs.Trigger>
-      <Tabs.Trigger value="tecnico" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><Zap size={20}/> Power 4 Swing</Tabs.Trigger>
-      <Tabs.Trigger value="fundamental" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><ShieldCheck size={20}/> Pablo Report</Tabs.Trigger>
+      <Tabs.Trigger value="lp" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><BarChart3 size={20}/> Estrategia de Liquidez</Tabs.Trigger>
+      <Tabs.Trigger value="tecnico" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><Zap size={20}/> Análisis Técnico</Tabs.Trigger>
+      <Tabs.Trigger value="fundamental" className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 font-bold text-slate-500 whitespace-nowrap"><ShieldCheck size={20}/> Análisis Fundamental</Tabs.Trigger>
     </Tabs.List>
 
     <Tabs.Content value="tecnico" className="focus:outline-none">
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-black mb-1">Analisis Power 4</h2>
+            <h2 className="text-3xl font-black mb-1">Análisis Técnico (Power 4)</h2>
             <p className="text-slate-400 font-bold text-xs uppercase">Ref: Semanal | Op: Diario (Cierre 01:00 AM)</p>
           </div>
           {price && (
@@ -148,7 +155,12 @@ className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shad
 
     <Tabs.Content value="fundamental" className="focus:outline-none">
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm max-w-4xl">
-        <h2 className="text-2xl font-black mb-6 flex items-center gap-3"><BookOpen size={28} className="text-blue-600"/> Auditoria Completa (12 Puntos)</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h2 className="text-2xl font-black flex items-center gap-3"><BookOpen size={28} className="text-blue-600"/> Análisis Fundamental (12 Puntos)</h2>
+          <button onClick={generarPrompt} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95 text-sm shadow-md">
+            Generar Prompt Maestro
+          </button>
+        </div>
         <div className="grid gap-3">
           {pabloReportItems.map((item, idx) => (
             <div 
@@ -168,7 +180,7 @@ className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shad
 
     <Tabs.Content value="lp" className="focus:outline-none">
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-        <h2 className="text-2xl font-black mb-6">Comparador de Pares (Liquidez)</h2>
+        <h2 className="text-2xl font-black mb-6">Estrategia de Liquidez</h2>
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <input className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium" placeholder="Token A (ej: solana)" />
           <div className="flex items-center justify-center font-black text-slate-300">VS</div>
