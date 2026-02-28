@@ -21,6 +21,13 @@ setChecklist(newChecklist);
 };
 
 const generarPrompt = () => {
+    const tokenName = mainToken ? mainToken.toUpperCase() : "el token seleccionado";
+    const parte1 = "Por favor, dame toda la informacion relativa a ";
+    const parte2 = " respondiendo ordenadamente a todas estas categorias. Incluye una nota final del 1 al 10 para holders y especuladores.\n\nPlantilla:\n";
+    const promptText = parte1 + tokenName + parte2 + pabloReportItems.join('\n');
+    navigator.clipboard.writeText(promptText);
+    alert("Prompt copiado al portapapeles. ¡Listo para pegar en tu IA!");
+  };
 const tokenName = mainToken ? mainToken.toUpperCase() : "el token seleccionado";
 const promptText = Por favor, dame toda la información relativa a ${tokenName} respondiendo ordenadamente a todas estas categorías que a continuación te detallo. Incluye una nota final del 1 al 10, siendo 1 una mala inversión y 10 una magnífica oportunidad de inversión. Debes ofrecer una nota para holders de largo plazo y otra para compras especulativas de corto o medio plazo.\n\nAquí tienes la plantilla para el análisis:\n + pabloReportItems.join('\n');
 navigator.clipboard.writeText(promptText);
