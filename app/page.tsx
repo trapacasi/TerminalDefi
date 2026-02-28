@@ -8,6 +8,10 @@ const [mainToken, setMainToken] = useState('');
 const [price, setPrice] = useState<number | null>(null);
 const [loading, setLoading] = useState(false);
 
+const [sma20, setSma20] = useState(null);
+const [sma40, setSma40] = useState(null);
+const [etapa, setEtapa] = useState('Esperando datos...');
+
 const [checklist, setChecklist] = useState<boolean[]>(new Array(12).fill(false));
 
 const toggleCheck = (index: number) => {
@@ -17,6 +21,38 @@ setChecklist(newChecklist);
 };
 
 const analizarToken = async () => {
+if (!mainToken) return;
+setLoading(true);
+try {
+const res = await fetch('/api/prices?token=' + mainToken.toLowerCase() + '&days=60');
+const data = await res.json();
+if (data && data.length > 0) {
+const validPrices = data.map((d) => d.price);
+const currentPrice = validPrices[validPrices.length - 1];
+setPrice(currentPrice);
+if (validPrices.length >= 40) {
+const last20 = validPrices.slice(-20);
+const last40 = validPrices.slice(-40);
+const calcMMS20 = last20.reduce((a, b) => a + b, 0) / 20;
+const calcMMS40 = last40.reduce((a, b) => a + b, 0) / 40;
+setSma20(calcMMS20);
+setSma40(calcMMS40);
+if (calcMMS20 > calcMMS40 && currentPrice > calcMMS20) {
+setEtapa('ETAPA 2 (Alcista)');
+} else if (calcMMS20 < calcMMS40 && currentPrice < calcMMS20) {
+setEtapa('ETAPA 4 (Bajista)');
+} else if (currentPrice > calcMMS20 && calcMMS20 < calcMMS40) {
+setEtapa('ETAPA 1 (Base/Acumulación)');
+} else {
+setEtapa('ETAPA 3 (Distribución)');
+}
+}
+}
+} catch (error) {
+console.error('Error');
+}
+setLoading(false);
+};
 if (!mainToken) return;
 setLoading(true);
 try {
