@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-// Definimos la estructura de los datos que esperamos recibir de la API
 interface TokenData {
   symbol: string;
   currentPrice: number;
@@ -16,21 +15,25 @@ interface TokenData {
 export default function Dashboard() {
   const [tokens, setTokens] = useState<TokenData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState('');
 
-  // Esta función llama a nuestra API interna al cargar la página
   useEffect(() => {
     async function loadData() {
       try {
         const response = await fetch('/api/report');
         const json = await response.json();
-        setTokens(json.data);
         
-        // Formateamos la hora de actualización
+        if (json.data) {
+          setTokens(json.data);
+        } else {
+          setErrorMsg(json.error || "Error desconocido desde el servidor");
+        }
+        
         const now = new Date();
         setLastUpdate(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
       } catch (error) {
-        console.error("Error al cargar el reporte:", error);
+        setErrorMsg("Fallo crítico de conexión con la API");
       } finally {
         setLoading(false);
       }
@@ -39,7 +42,6 @@ export default function Dashboard() {
     loadData();
   }, []);
 
-  // Función para dar color a la etapa según su inercia
   const getStageColor = (stage: string) => {
     switch (stage) {
       case 'E2': return 'bg-green-500/20 text-green-400 border-green-500/50';
@@ -54,7 +56,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans">
       <div className="max-w-6xl mx-auto">
         
-        {/* Cabecera del Dashboard */}
         <header className="mb-8 border-b border-slate-800 pb-6">
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
             Terminal POWER 4
@@ -65,12 +66,17 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Tabla de Control */}
-        <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
+        <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl overflow-hidden min-h-[300px]">
           {loading ? (
-            <div className="flex flex-col items-center justify-center p-20">
+            <div className="flex flex-col items-center justify-center p-20 h-full">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
               <p className="text-slate-400">Procesando reglas algorítmicas y descargando OHLCV...</p>
+            </div>
+          ) : errorMsg ? (
+            <div className="flex flex-col items-center justify-center p-20 h-full">
+              <div className="text-red-500 text-6xl mb-4">⚠️</div>
+              <h2 className="text-xl font-bold text-white mb-2">Error en el Escáner</h2>
+              <p className="text-red-400 bg-red-500/10 px-4 py-2 rounded border border-red-500/20">{errorMsg}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -107,7 +113,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
