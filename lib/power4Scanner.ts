@@ -10,7 +10,6 @@ export interface Power4Report {
   distanceToMMS20: number;
 }
 
-// Función auxiliar para calcular medias móviles
 function calculateMMS(closes: number[], period: number): number {
   if (closes.length < period) return 0;
   const sum = closes.slice(closes.length - period).reduce((acc, val) => acc + val, 0);
@@ -18,59 +17,58 @@ function calculateMMS(closes: number[], period: number): number {
 }
 
 export async function analyzeToken(symbol: string): Promise<Power4Report> {
-  // Aseguramos el formato correcto para Binance (ej. JUPUSDC)
-  const cleanSymbol = symbol.replace('/', '').toUpperCase();
+  // 1. Limpiamos el símbolo para Binance
+  // Si envías "JUP/USDC" o "jupiter", lo convierte en "JUPUSDT" (USDT tiene más historial en Binance)
+  const baseToken = symbol.split('/')[0].toUpperCase().trim();
+  const cleanSymbol = `${baseToken}USDT`; 
   
-  // Binance API - Velas diarias (cierre 01:00 AM ES / 00:00 UTC)
-  const url = `https://data-api.binance.vision/api/v3/klines?symbol=${cleanSymbol}&interval=1d&limit=250`;
+  // 2. Llamada a Binance (Velas diarias)
+  const url = `https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}&interval=1d&limit=250`;
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Token ${symbol} no válido o sin par USDC en Binance.`);
+      throw new Error(`Token ${baseToken} no encontrado en Binance.`);
     }
 
     const rawData = await response.json();
-    if (rawData.length < 20) {
-      throw new Error(`Histórico insuficiente para ${symbol} (mínimo 20 días).`);
-    }
-
-    // Extraemos los precios de cierre (índice 4 en la respuesta de Binance)
     const closes = rawData.map((candle: any[]) => parseFloat(candle[4]));
     const currentPrice = closes[closes.length - 1];
 
-    // Cálculos de Medias Móviles Simples (MMS)
+    // 3. Cálculos de Medias Móviles (MMS)
     const mms20 = calculateMMS(closes, 20);
     const mms40 = calculateMMS(closes, 40);
     const mms200 = closes.length >= 200 ? calculateMMS(closes, 200) : 0;
 
-    // Barrio Sésamo: Distancia porcentual del precio a la MMS20
+    // 4. Distancia al "Barrio Sésamo" (MMS20)
     const distanceToMMS20 = ((currentPrice - mms20) / mms20) * 100;
 
-    // Evaluación de Etapas (Lifecycle Power 4)
+    // 5. Lógica de Etapas (Lifecycle Power 4)
     let stage: 'E1' | 'E2' | 'E3' | 'E4' | 'INDEFINIDA' = 'INDEFINIDA';
     
-    // Determinamos la pendiente de la MMS20 analizando días previos
-    const mms20_yesterday = calculateMMS(closes.slice(0, -1), 20);
-    const mms20_dayBefore = calculateMMS(closes.slice(0, -2), 20);
-    
-    const isMMS20Rising = mms20 > mms20_yesterday && mms20_yesterday >= mms20_dayBefore;
-    const isMMS20Falling = mms20 < mms20_yesterday && mms20_yesterday <= mms20_dayBefore;
-    const isMMS20Flattening = Math.abs((mms20 - mms20_yesterday) / mms20_yesterday) < 0.001;
+    const mms20_prev = calculateMMS(closes.slice(0, -1), 20);
+    const isMMS20Rising = mms20 > mms20_prev;
+    const isMMS20Falling = mms20 < mms20_prev;
 
-    // Reglas estrictas extraídas de "La Biblia del Trader"
+    // E2: Tendencia Alcista
     if (currentPrice > mms20 && mms20 > mms40 && isMMS20Rising) {
-      stage = 'E2'; // Tendencia Alcista Confirmada
-    } else if (currentPrice < mms20 && mms20 < mms40 && isMMS20Falling) {
-      stage = 'E4'; // Tendencia Bajista Confirmada
-    } else if (currentPrice > mms20 && (isMMS20Flattening || !isMMS20Falling) && mms20 < mms40) {
-      stage = 'E1'; // Transición Alcista
-    } else if (currentPrice < mms20 && (isMMS20Flattening || !isMMS20Rising) && mms20 > mms40) {
-      stage = 'E3'; // Transición Bajista
+      stage = 'E2';
+    } 
+    // E4: Tendencia Bajista
+    else if (currentPrice < mms20 && mms20 < mms40 && isMMS20Falling) {
+      stage = 'E4';
+    } 
+    // E1: Suelo / Acumulación
+    else if (currentPrice > mms20 && mms20 < mms40) {
+      stage = 'E1';
+    } 
+    // E3: Techo / Distribución
+    else if (currentPrice < mms20 && mms20 > mms40) {
+      stage = 'E3';
     }
 
     return {
-      symbol,
+      symbol: baseToken,
       currentPrice,
       mms20,
       mms40,
@@ -80,7 +78,7 @@ export async function analyzeToken(symbol: string): Promise<Power4Report> {
     };
 
   } catch (error: any) {
-    console.error(`Error escaneando ${symbol}:`, error.message);
+    console.error("Error en Scanner:", error.message);
     throw error;
   }
 }
