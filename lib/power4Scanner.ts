@@ -12,59 +12,50 @@ export interface Power4Report {
 
 function calculateMMS(closes: number[], period: number): number {
   if (closes.length < period) return 0;
-  const sum = closes.slice(closes.length - period).reduce((acc, val) => acc + val, 0);
+  const sum = closes.slice(closes.length - period).reduce((acc: number, val: number) => acc + val, 0);
   return sum / period;
 }
 
 export async function analyzeToken(symbol: string): Promise<Power4Report> {
-  // 1. Limpiamos el símbolo para Binance
-  // Si envías "JUP/USDC" o "jupiter", lo convierte en "JUPUSDT" (USDT tiene más historial en Binance)
+  // Limpieza de símbolo para Binance
   const baseToken = symbol.split('/')[0].toUpperCase().trim();
   const cleanSymbol = `${baseToken}USDT`; 
   
-  // 2. Llamada a Binance (Velas diarias)
+  // API de Binance (Velas diarias)
   const url = `https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}&interval=1d&limit=250`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { next: { revalidate: 0 } }); // Evita caché de Next.js
     if (!response.ok) {
-      throw new Error(`Token ${baseToken} no encontrado en Binance.`);
+      throw new Error(`Token ${baseToken} no encontrado.`);
     }
 
     const rawData = await response.json();
-    const closes = rawData.map((candle: any[]) => parseFloat(candle[4]));
+    // El índice 4 es el precio de cierre (Close)
+    const closes = rawData.map((candle: any[]) => parseFloat(candle[4] as string));
     const currentPrice = closes[closes.length - 1];
 
-    // 3. Cálculos de Medias Móviles (MMS)
     const mms20 = calculateMMS(closes, 20);
     const mms40 = calculateMMS(closes, 40);
     const mms200 = closes.length >= 200 ? calculateMMS(closes, 200) : 0;
 
-    // 4. Distancia al "Barrio Sésamo" (MMS20)
     const distanceToMMS20 = ((currentPrice - mms20) / mms20) * 100;
 
-    // 5. Lógica de Etapas (Lifecycle Power 4)
+    // Lógica de Etapas del Método Power 4
     let stage: 'E1' | 'E2' | 'E3' | 'E4' | 'INDEFINIDA' = 'INDEFINIDA';
     
     const mms20_prev = calculateMMS(closes.slice(0, -1), 20);
     const isMMS20Rising = mms20 > mms20_prev;
     const isMMS20Falling = mms20 < mms20_prev;
 
-    // E2: Tendencia Alcista
     if (currentPrice > mms20 && mms20 > mms40 && isMMS20Rising) {
-      stage = 'E2';
-    } 
-    // E4: Tendencia Bajista
-    else if (currentPrice < mms20 && mms20 < mms40 && isMMS20Falling) {
-      stage = 'E4';
-    } 
-    // E1: Suelo / Acumulación
-    else if (currentPrice > mms20 && mms20 < mms40) {
-      stage = 'E1';
-    } 
-    // E3: Techo / Distribución
-    else if (currentPrice < mms20 && mms20 > mms40) {
-      stage = 'E3';
+      stage = 'E2'; // Alcista
+    } else if (currentPrice < mms20 && mms20 < mms40 && isMMS20Falling) {
+      stage = 'E4'; // Bajista
+    } else if (currentPrice > mms20 && mms20 < mms40) {
+      stage = 'E1'; // Suelo
+    } else if (currentPrice < mms20 && mms20 > mms40) {
+      stage = 'E3'; // Techo
     }
 
     return {
