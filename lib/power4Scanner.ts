@@ -2,7 +2,6 @@
 import ccxt from 'ccxt';
 import { SMA } from 'technicalindicators';
 
-// Instanciamos Binance. No requiere API Keys para datos públicos (velas/OHLCV).
 const exchange = new ccxt.binance();
 
 export interface TokenAnalysis {
@@ -12,23 +11,19 @@ export interface TokenAnalysis {
   mms40: number;
   mms200: number;
   stage: 'E1' | 'E2' | 'E3' | 'E4' | 'Transición';
-  distanceToMMS20: number; // Para evaluar la regla del 4% (Barrio Sésamo)
+  distanceToMMS20: number;
 }
 
 export async function analyzeToken(symbol: string): Promise<TokenAnalysis> {
   try {
-    // 1. Obtenemos las últimas 250 velas diarias para asegurar que la MMS200 ("La Gran Ballena") se calcula correctamente.
-    // El cierre de esta vela corresponde a la 01:00 AM (España).
     const ohlcv = await exchange.fetchOHLCV(symbol, '1d', undefined, 250);
     
     const closes = ohlcv.map(candle => candle[4]);
     const highs = ohlcv.map(candle => candle[2]);
     const lows = ohlcv.map(candle => candle[3]);
     
-    // Obtenemos el precio en tiempo real exacto en el momento de la ejecución
     const currentPrice = closes[closes.length - 1];
 
-    // 2. Cálculo de Medias Móviles Simples (MMS)
     const mms20Array = SMA.calculate({ period: 20, values: closes });
     const mms40Array = SMA.calculate({ period: 40, values: closes });
     const mms200Array = SMA.calculate({ period: 200, values: closes });
@@ -37,10 +32,8 @@ export async function analyzeToken(symbol: string): Promise<TokenAnalysis> {
     const mms40 = mms40Array[mms40Array.length - 1];
     const mms200 = mms200Array[mms200Array.length - 1];
 
-    // 3. Cálculo de la Distancia a la MM20 (Barrio Sésamo)
     const distanceToMMS20 = ((currentPrice - mms20) / mms20) * 100;
 
-    // 4. Evaluación de Etapas (Lógica Estructural POWER 4)
     const stage = determineStage(closes, highs, lows, mms20Array, mms40Array);
 
     return {
@@ -59,13 +52,55 @@ export async function analyzeToken(symbol: string): Promise<TokenAnalysis> {
   }
 }
 
-function determineStage(closes: number[], highs: number[], lows: number[], mms20: number[], mms40: number[]) {
-  // Aquí inyectaremos el árbol de decisiones:
-  // - E1: Máximos ya no decrecientes, el precio corta la MM20, MM20 empieza a aplanarse.
-  // - E2: Máximos y mínimos crecientes, superando 2 máximos previos, MM20 y MM40 alcistas.
-  // - E3: Mínimos ya no crecientes, precio corta MM20, MM20 aplanándose.
-  // - E4: Máximos y mínimos decrecientes, perforación de 2 mínimos previos, MM20/40 bajistas.
+function determineStage(
+  closes: number[], 
+  highs: number[], 
+  lows: number[], 
+  mms20Array: number[], 
+  mms40Array: number[]
+): 'E1' | 'E2' | 'E3' | 'E4' | 'Transición' {
   
-  // Por ahora, devolvemos un placeholder que iremos llenando con la matemática exacta
-  return 'Transición'; 
+  // 1. Extraemos los datos más recientes para evaluar inercia
+  const currentClose = closes[closes.length - 1];
+  const mms20 = mms20Array[mms20Array.length - 1];
+  const mms20Prev = mms20Array[mms20Array.length - 2];
+  const mms40 = mms40Array[mms40Array.length - 1];
+  const mms40Prev = mms40Array[mms40Array.length - 2];
+
+  // 2. Evaluamos la pendiente de las Medias Móviles (Alcista o Bajista)
+  const mms20Bullish = mms20 > mms20Prev;
+  const mms20Bearish = mms20 < mms20Prev;
+  const mms40Bullish = mms40 > mms40Prev;
+  const mms40Bearish = mms40 < mms40Prev;
+  const mms20Flat = Math.abs((mms20 - mms20Prev) / mms20Prev) < 0.0005; // Tolerancia de aplanamiento
+
+  // 3. Regla de los 3 Cierres
+  const last3Closes = closes.slice(-3);
+  const last3MMS20 = mms20Array.slice(-3);
+  const threeClosesBelowMMS20 = last3Closes.every((close, index) => close < last3MMS20[index]);
+  const threeClosesAboveMMS20 = last3Closes.every((close, index) => close > last3MMS20[index]);
+
+  // 4. Lógica Estructural de Etapas
+  
+  // ETAPA 2: Dominio comprador, MM20 y MM40 alcistas.
+  if (currentClose > mms20 && mms20Bullish && mms40Bullish && !threeClosesBelowMMS20) {
+    return 'E2';
+  }
+
+  // ETAPA 4: Dominio vendedor, MM20 y MM40 bajistas.
+  if (currentClose < mms20 && mms20Bearish && mms40Bearish && !threeClosesAboveMMS20) {
+    return 'E4';
+  }
+
+  // ETAPA 3 (Distribución): Detectamos agotamiento (3 cierres por debajo o consumo/aplanamiento).
+  if (threeClosesBelowMMS20 || (mms20Flat && currentClose < mms20)) {
+    return 'E3';
+  }
+
+  // ETAPA 1 (Acumulación): Detectamos freno de caída (3 cierres por encima o aplanamiento tras caída).
+  if (threeClosesAboveMMS20 || (mms20Flat && currentClose > mms20)) {
+    return 'E1';
+  }
+
+  return 'Transición';
 }
