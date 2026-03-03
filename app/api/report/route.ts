@@ -1,26 +1,36 @@
 // app/api/report/route.ts
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { analyzeToken } from '../../../lib/power4Scanner';
 
+// Forzamos que esta ruta sea dinámica para que Vercel no la guarde en caché (datos siempre en vivo)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
-  // Extraemos el parámetro ?symbol= de la URL
+  // Extraemos el parámetro 'symbol' que nos manda el buscador del Dashboard (ej. "?symbol=ETHUSDC")
   const { searchParams } = new URL(request.url);
   const querySymbol = searchParams.get('symbol');
 
   try {
-    // Si no se especifica un token en la búsqueda, analizamos BTCUSDC por defecto.
+    // Si la página hace una petición vacía al inicio, por defecto cargamos BTCUSDC
     const targetSymbol = querySymbol || 'BTCUSDC';
     
-    // Solo analizamos el token solicitado
+    // Llamamos a tu motor en 'lib/power4Scanner.ts' y esperamos su análisis real sobre Binance
     const reportData = await analyzeToken(targetSymbol);
     
+    // Devolvemos los datos analizados a tu página.
+    // Ojo: Lo devolvemos dentro de un array ( [reportData] ) 
+    // porque tu 'page.tsx' original (json.data[0]) espera recibir una lista.
     return NextResponse.json({
       timestamp: new Date().toISOString(),
-      data: [reportData] // Retornamos en formato array para mantener la compatibilidad con page.tsx
+      data: [reportData]
     });
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Fallo al generar el análisis' }, { status: 500 });
+    // En caso de que el token no exista en Binance, enviamos el error controlado
+    return NextResponse.json(
+      { error: error.message || 'Fallo al generar el análisis' }, 
+      { status: 500 }
+    );
   }
 }
