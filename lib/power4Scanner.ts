@@ -16,8 +16,8 @@ export async function analyzeToken(symbol: string): Promise<TokenAnalysis> {
     // Adaptamos el formato del símbolo (ej. "BTC/USDT" pasa a "BTCUSDT") para Binance
     const formattedSymbol = symbol.replace('/', '');
     
-    // Llamada nativa y directa a Binance (sin librerías pesadas)
-    const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${formattedSymbol}&interval=1d&limit=250`);
+    // Llamada al servidor LIBRE de datos de Binance (sin bloqueos geográficos)
+    const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${formattedSymbol}&interval=1d&limit=250`);
     
     if (!response.ok) {
       throw new Error(`Error de conexión con Binance para ${symbol}`);
