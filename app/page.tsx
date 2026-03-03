@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 
-// Interfaz de datos con referencia a USDC
 interface TokenData {
   symbol: string;
   currentPrice: number;
@@ -13,68 +12,43 @@ interface TokenData {
   distanceToMMS20: number;
 }
 
-// COMPONENTE BUSCADOR UNIVERSAL (Predictivo y Libre)
+// BUSCADOR UNIVERSAL (Sin listas cerradas)
 function TokenSearch({ value, onChange, label }: { value: string, onChange: (val: string) => void, label: string }) {
   const [query, setQuery] = useState(value.replace('/USDC', ''));
-  const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Sugerencias rápidas (incluyendo JUP como pediste)
-  const suggestions = ['BTC', 'ETH', 'SOL', 'JUP', 'AAVE', 'LINK', 'UNI', 'DOT'];
+  // Al escribir, actualizamos el estado local
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value.toUpperCase());
+  };
 
-  useEffect(() => {
-    function handleClickOutside(event: any) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false);
+  // Al pulsar Enter o el botón, disparamos la búsqueda global
+  const triggerSearch = () => {
+    if (query.trim() !== "") {
+      onChange(`${query.trim()}/USDC`);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleSelect = (symbol: string) => {
-    const fullSymbol = `${symbol.toUpperCase()}/USDC`;
-    setQuery(symbol.toUpperCase());
-    onChange(fullSymbol);
-    setIsOpen(false);
   };
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block ml-1 tracking-widest">{label}</label>
-      <div className="relative">
+      <div className="relative flex gap-2">
         <input
           type="text"
           value={query}
-          onFocus={() => setIsOpen(true)}
-          onChange={(e) => setQuery(e.target.value.toUpperCase())}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSelect(query);
-          }}
+          onChange={handleInputChange}
+          onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
           className="w-full bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-white font-bold outline-none focus:border-indigo-500 transition-all text-sm"
-          placeholder="Ej: JUP, BTC, SOL..."
+          placeholder="Ej: JUP, SOL, BTC..."
         />
         <button 
-          onClick={() => handleSelect(query)}
-          className="absolute right-3 top-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold transition-colors"
+          onClick={triggerSearch}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 rounded-xl font-bold text-xs transition-colors uppercase tracking-widest"
         >
-          CARGAR
+          Cargar
         </button>
       </div>
-      
-      {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
-          <p className="p-3 text-[9px] font-black text-slate-600 uppercase border-b border-slate-800">Sugerencias rápidas</p>
-          {suggestions.filter(s => s.includes(query)).map(s => (
-            <div 
-              key={s}
-              onClick={() => handleSelect(s)}
-              className="flex items-center justify-between p-4 hover:bg-indigo-600/20 cursor-pointer border-b border-slate-800/50 last:border-0"
-            >
-              <span className="text-white text-sm font-bold">{s}/USDC</span>
-              <span className="text-indigo-500 text-[10px] font-bold">SELECCIONAR</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <p className="text-[9px] text-slate-600 mt-1 ml-1 font-medium italic">Par de referencia automático: USDC</p>
     </div>
   );
 }
@@ -97,7 +71,6 @@ export default function Dashboard() {
       setLoading(true);
       setErrorMsg(null);
       try {
-        // Limpiamos el símbolo para la API (ej: BTC/USDC -> BTCUSDC)
         const cleanSymbol = tokenTech.replace('/', '');
         const res = await fetch(`/api/report?symbol=${cleanSymbol}`);
         const json = await res.json();
@@ -105,7 +78,7 @@ export default function Dashboard() {
         if (json.data && json.data.length > 0) {
           setTechData(json.data[0]);
         } else {
-          setErrorMsg(`El par ${tokenTech} no devolvió datos. Asegúrate de que existe en USDC.`);
+          setErrorMsg(`No se encontraron datos para ${tokenTech} en USDC.`);
         }
       } catch (e) {
         setErrorMsg("Error de conexión con el Hub de datos.");
@@ -128,21 +101,23 @@ export default function Dashboard() {
               PABLO TERMINAL <span className="text-indigo-500">PRO</span>
             </h1>
             <p className="text-slate-600 text-[10px] tracking-[0.3em] uppercase font-bold mt-1">
-              USDC Liquidity Hub & Power 4 Engine
+              Institutional Analysis | Base: USDC
             </p>
           </div>
           <div className="hidden md:block text-right">
-             <div className="text-indigo-500 text-[10px] font-black uppercase tracking-widest">Global Scan Active</div>
-             <div className="text-slate-500 text-[9px] mt-1 italic font-mono">BASE_CURRENCY: USDC</div>
+             <div className="text-green-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 justify-end">
+               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+               Universal Scanner Active
+             </div>
           </div>
         </header>
 
-        <nav className="flex gap-2 mb-10 bg-slate-900/40 p-1.5 rounded-2xl border border-slate-800 w-fit overflow-x-auto">
+        <nav className="flex gap-2 mb-10 bg-slate-900/40 p-1.5 rounded-2xl border border-slate-800 w-fit">
           {['Estrategia de Liquidez', 'Análisis Técnico', 'Análisis Fundamental'].map((tab) => (
             <button 
               key={tab} 
               onClick={() => setActiveTab(tab)} 
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
               {tab}
             </button>
@@ -150,37 +125,34 @@ export default function Dashboard() {
         </nav>
 
         {activeTab === 'Análisis Técnico' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl border-t-indigo-500/30">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-8">
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-8 border-b border-slate-800/50 pb-8">
                 <div>
-                  <h2 className="text-xl font-bold text-white uppercase tracking-tight">Escáner Power 4 (Lifecycle)</h2>
-                  <p className="text-slate-500 text-sm mt-1">Cálculo institucional optimizado para pares USDC</p>
+                  <h2 className="text-xl font-bold text-white uppercase">Power 4 Lifecycle</h2>
+                  <p className="text-slate-500 text-sm mt-1">Cálculo de etapas institucionales para cualquier token</p>
                 </div>
-                <div className="w-full lg:w-80">
-                  <TokenSearch label="Token de Análisis" value={tokenTech} onChange={setTokenTech} />
+                <div className="w-full lg:w-96">
+                  <TokenSearch label="Buscar cualquier Token" value={tokenTech} onChange={setTokenTech} />
                 </div>
               </div>
 
               {loading ? (
-                <div className="py-24 text-center">
-                  <div className="animate-pulse flex flex-col items-center">
-                    <div className="h-2 w-48 bg-slate-800 rounded-full mb-4"></div>
-                    <p className="text-slate-600 text-[10px] tracking-[0.4em] uppercase font-black">Sincronizando con Blockchain...</p>
-                  </div>
+                <div className="py-20 text-center uppercase tracking-[0.3em] text-slate-600 text-[10px] font-bold">
+                  Conectando con el motor de búsqueda universal...
                 </div>
               ) : techData ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">Precio ({tokenTech.split('/')[0]})</p>
+                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">Precio Actual</p>
                     <p className="text-2xl font-mono text-white">${techData.currentPrice.toLocaleString()}</p>
                   </div>
                   <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">Etapa Lifecycle</p>
-                    <div className="text-indigo-400 font-black text-xl tracking-tighter">{techData.stage}</div>
+                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">Etapa</p>
+                    <div className="text-indigo-400 font-black text-xl italic tracking-tighter">{techData.stage}</div>
                   </div>
                   <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">MM20 (Diaria)</p>
+                    <p className="text-slate-500 text-[10px] uppercase font-black mb-3">Media Móvil 20</p>
                     <p className="text-xl font-mono text-slate-400">${techData.mms20.toFixed(2)}</p>
                   </div>
                   <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
@@ -201,18 +173,17 @@ export default function Dashboard() {
 
         {activeTab === 'Estrategia de Liquidez' && (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8">
-              <h2 className="text-xl font-bold text-white mb-8 uppercase tracking-tight">Comparativa de Liquidez USDC</h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+              <h2 className="text-xl font-bold text-white mb-8 uppercase tracking-tight">Comparativa Global (USDC)</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end mb-12">
-                <TokenSearch label="Token Base (A)" value={tokenLiqA} onChange={setTokenLiqA} />
-                <TokenSearch label="Token Contraste (B)" value={tokenLiqB} onChange={setTokenLiqB} />
+                <TokenSearch label="Activo A" value={tokenLiqA} onChange={setTokenLiqA} />
+                <TokenSearch label="Activo B" value={tokenLiqB} onChange={setTokenLiqB} />
               </div>
               <div className="p-20 border-2 border-dashed border-slate-800 rounded-3xl text-center bg-slate-950/20">
-                <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.5em] mb-4">Correlación de Volúmenes</p>
-                <div className="flex justify-center items-center gap-6">
-                   <span className="text-white font-mono text-xl">{tokenLiqA}</span>
-                   <span className="text-slate-700 italic text-sm">vs</span>
-                   <span className="text-white font-mono text-xl">{tokenLiqB}</span>
+                <div className="flex justify-center items-center gap-8">
+                   <span className="text-white font-mono text-2xl font-black">{tokenLiqA}</span>
+                   <span className="text-slate-700 font-black tracking-widest">VS</span>
+                   <span className="text-white font-mono text-2xl font-black">{tokenLiqB}</span>
                 </div>
               </div>
             </div>
