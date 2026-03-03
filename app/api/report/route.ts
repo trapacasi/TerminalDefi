@@ -1,6 +1,6 @@
 // app/api/report/route.ts
 import { NextResponse } from 'next/server';
-import { analyzeToken } from '@/lib/power4Scanner';
+import { analyzeToken } from '../../../lib/power4Scanner';
 
 export async function GET() {
   // Lista de activos base para la primera prueba de concepto
